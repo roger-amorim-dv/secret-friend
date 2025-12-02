@@ -61,29 +61,68 @@ def send_email(sender_email, sender_password, receiver_email, subject, body):
 
 
 # -----------------------------------------
+# Group pairs by email and prepare consolidated emails
+# -----------------------------------------
+def group_pairs_by_email(pairs):
+    # Group givers by email (who gives to whom)
+    email_to_givers = {}
+    for p in pairs:
+        email = p["giver_email"]
+        if email not in email_to_givers:
+            email_to_givers[email] = []
+        email_to_givers[email].append({
+            "name": p["giver_name"],
+            "secret_friend": p["receiver_name"]
+        })
+    
+    return email_to_givers
+
+
+# -----------------------------------------
 # Full Execution
 # -----------------------------------------
 def run_secret_friend(filename, sender_email, sender_password):
     participants = load_participants_from_txt(filename)
     pairs = sort_secret_friend(participants)
-
-    for p in pairs:
+    
+    # Group pairs by email
+    email_to_givers = group_pairs_by_email(pairs)
+    
+    # Send one email per unique email address
+    for email, givers in email_to_givers.items():
+        # Build list of names for greeting
+        names = [g["name"] for g in givers]
+        if len(names) == 1:
+            greeting = f"Olá {names[0]}!"
+            intro = "Você foi escolhido(a) para o jogo do Secret Friend! 🎁"
+        else:
+            greeting = f"Olá {', '.join(names[:-1])} e {names[-1]}!"
+            intro = "Vocês foram escolhidos(as) para o jogo do Secret Friend! 🎁"
+        
+        # Build secret friend information
+        secret_friend_section = []
+        for giver in givers:
+            secret_friend_section.append(
+                f"👉 {giver['name']}, seu(a) amigo(a) secreto é: {giver['secret_friend']}"
+            )
+        
+        # Build email body
         body = f"""
-Olá {p['giver_name']}!
+{greeting}
 
-Você foi escolhido(a) para o jogo do Secret Friend! 🎁
+{intro}
 
-Seu(a) amigo(a) secreto é:
+Seu amigo secreto (quem você deve presentear):
 
-👉 {p['receiver_name']}
+{chr(10).join(secret_friend_section)}
 
-Mantenha isso em segredo e divirta-se!
+Mantenha(m) isso em segredo e divirtam-se!
 """
 
         send_email(
             sender_email,
             sender_password,
-            p["giver_email"],
+            email,
             "Seu Amigo Secreto 🎁",
             body
         )
@@ -93,6 +132,6 @@ Mantenha isso em segredo e divirta-se!
 if __name__ == "__main__":
     # EDIT THESE
     sender_email = "your_email@gmail.com"
-    sender_password = "password"
+    sender_password = "your_password"
 
     run_secret_friend("participants.txt", sender_email, sender_password)
